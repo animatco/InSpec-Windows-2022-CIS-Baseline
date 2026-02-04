@@ -1,0 +1,25 @@
+name: inspec-InSpec-Windows-2022-CIS-Baseline
+title: InSpec-Windows-2022-CIS-Baseline
+maintainer: Steve Gold
+copyright: ''
+copyright_email: ''
+license: Apache-2.0
+summary: InSpec CIS benchmark baseline for Microsoft Windows Server 2022 (generated
+  from Ansible hardening role).
+version: 0.2.0
+supports:
+- platform: windows
+inputs:
+- name: run_level_1
+  description: Run CIS Level 1 controls
+  type: Boolean
+  value: true
+- name: run_level_2
+  description: Run CIS Level 2 controls
+  type: Boolean
+  value: true
+- name: server_role
+  description: 'Server role: ''member_server'' or ''domain_controller'' (or ''domain_member''
+    if applicable)'
+  type: String
+  value: member_server

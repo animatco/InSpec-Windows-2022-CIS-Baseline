@@ -1,0 +1,164 @@
+# waivers.template.yml
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Organizational benchmark exceptions (waivers) for the Windows Server 2025 CIS
+#   InSpec baseline. Use this file for approved risk acceptances, compensating
+#   controls, or intentional deviations (e.g., enforced by Domain GPO).
+#
+# Notes:
+# - Keys are control IDs as defined in the profile (e.g., cis-2.3.10.5).
+# - "run: false" marks the control as waived (skipped) in reports.
+# - Include a justification and (ideally) an expiration_date.
+# -----------------------------------------------------------------------------
+
+# --- Remote access / RDP patterns (common exception class) ---------------------
+cis-2.2.21:
+  run: false
+  justification: >
+    Exception: Remote Desktop Services required for break-glass support.
+    Compensating controls: PAM/JIT, MFA, SIEM alerting. Exception ID: SEC-XXXX.
+  expiration_date: 2026-12-31
+
+cis-2.3.10.5:
+  run: false
+  justification: >
+    Exception: Non-admin support group permitted for RDP for specific app tier.
+    Approved by Security Architecture. Exception ID: SEC-XXXX.
+  expiration_date: 2026-12-31
+
+# --- WinRM / remote management (org tooling needs) -----------------------------
+cis-9.2.3:
+  run: false
+  justification: >
+    Exception: WinRM inbound required for automation tooling. Restricted by
+    source IP allowlist and mutual authentication. Exception ID: SEC-XXXX.
+  expiration_date: 2026-12-31
+
+# --- Legacy protocols / compatibility ----------------------------------------
+cis-2.3.11.3:
+  run: false
+  justification: >
+    Exception: Legacy application requires NTLM compatibility level lower than
+    CIS recommendation. Migration plan in place. Exception ID: SEC-XXXX.
+  expiration_date: 2026-06-30
+
+cis-2.3.8.1:
+  run: false
+  justification: >
+    Exception: SMB signing requirement temporarily waived for legacy NAS path.
+    Compensating control: network segmentation. Exception ID: SEC-XXXX.
+  expiration_date: 2026-06-30
+
+cis-18.4.4.1:
+  run: false
+  justification: >
+    Waived locally: setting enforced by Domain GPO; local check not authoritative.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+# --- Audit policy often enforced centrally via GPO / SIEM agents --------------
+cis-17.1.1:
+  run: false
+  justification: >
+    Waived locally: Advanced Audit Policy is enforced by Domain GPO and
+    validated centrally (Tanium/Remedio + SIEM). Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+cis-17.2.1:
+  run: false
+  justification: >
+    Waived locally: Audit subcategory configured by Domain GPO.
+  expiration_date: 2027-01-31
+
+cis-17.5.2:
+  run: false
+  justification: >
+    Waived locally: Audit policy managed centrally (Domain GPO / SIEM baselines).
+  expiration_date: 2027-01-31
+
+cis-17.6.1:
+  run: false
+  justification: >
+    Waived locally: Audit policy managed centrally (Domain GPO / SIEM baselines).
+  expiration_date: 2027-01-31
+
+# --- Password/lockout deltas (org standard differs from CIS) ------------------
+cis-1.1.1:
+  run: false
+  justification: >
+    Org standard differs; enforced by domain baseline / identity provider.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+cis-1.2.2:
+  run: false
+  justification: >
+    Org standard differs; lockout thresholds managed by domain policy.
+  expiration_date: 2027-01-31
+
+# --- User rights assignments (often domain baseline driven) -------------------
+cis-2.2.1:
+  run: false
+  justification: >
+    User rights assignments managed by Domain GPO. Local validation waived.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+cis-2.2.2:
+  run: false
+  justification: >
+    User rights assignments managed by Domain GPO. Local validation waived.
+  expiration_date: 2027-01-31
+
+cis-2.2.3:
+  run: false
+  justification: >
+    Service accounts require this right for app workload. Exception approved.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2026-12-31
+
+# --- “Cloud consumer” UX features (often irrelevant on servers) ---------------
+cis-19.7.8.1:
+  run: false
+  justification: >
+    Not applicable: Consumer Windows Spotlight/CloudContent settings are not
+    used on this server image. Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+cis-19.7.26.1:
+  run: false
+  justification: >
+    Not applicable: Consumer experience features not present/used in this tier.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+# --- App/driver install constraints ------------------------------------------
+cis-18.8.3.1:
+  run: false
+  justification: >
+    Managed by endpoint platform / domain baseline; local validation waived.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+# --- Event log sizing/retention often set by central policy ------------------
+cis-17.9.1:
+  run: false
+  justification: >
+    Event log retention/size set by central baseline; validated by telemetry.
+    Exception ID: SEC-XXXX.
+  expiration_date: 2027-01-31
+
+# --- Misc common “business need” exceptions ----------------------------------
+cis-2.3.7.1:
+  run: false
+  justification: >
+    Exception: Anonymous enumeration restriction conflicts with legacy workflow.
+    Compensating controls: segmentation + logging. Exception ID: SEC-XXXX.
+  expiration_date: 2026-06-30
+
+cis-2.3.9.5:
+  run: false
+  justification: >
+    Exception: Named pipes required for legacy line-of-business integration.
+    Documented and monitored. Exception ID: SEC-XXXX.
+  expiration_date: 2026-06-30

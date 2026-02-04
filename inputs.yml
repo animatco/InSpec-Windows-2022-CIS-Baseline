@@ -1,0 +1,58 @@
+# inputs.yml
+# Generalized InSpec inputs file for CIS benchmark controls
+# Customize values based on your environment and requirements
+
+# ---- Execution toggles ----
+# Control compliance level to enforce
+run_level_1: true      # Foundational/basic security controls
+run_level_2: false     # Defense-in-depth controls (optional)
+
+# Server role determines which controls apply
+server_role: member_server   # Options: member_server | domain_controller
+
+# ---- Section toggles ----
+# Enable/disable entire benchmark sections as needed
+# Format: run_section_XX: true/false where XX is the section number
+run_section_01: true
+run_section_02: true
+run_section_05: true
+run_section_09: true
+run_section_17: true
+run_section_18: true
+run_section_19: true
+
+# ---- Section 01: Account Policies ----
+password_history_size: 24
+max_password_age_days: 365
+min_password_age_days: 1
+min_password_length: 14
+password_complexity_enabled: true
+reversible_encryption_enabled: false
+account_lockout_threshold: 5
+account_lockout_duration_minutes: 15
+reset_account_lockout_counter_minutes: 15
+administrator_lockout_enabled: true
+
+# ---- Section 02: User Rights & Audit Policy ----
+# Customize these based on your organization's security requirements
+
+# Privilege rights (examples - adjust to your needs)
+# trusted_caller_privilege: []
+# network_logon_privilege:
+#   - Administrators
+#   - Authenticated Users
+
+# Audit policy settings
+# audit_account_logon: Success and Failure
+# audit_logon: Success and Failure
+# audit_object_access: Success and Failure
+
+# Security options
+disable_administrator_account: true
+disable_guest_account: true
+blank_password_console_only: true
+
+# ---- Additional Custom Parameters ----
+# Add environment-specific settings here as needed
+# environment: production
+# organization_name: Example Corp
