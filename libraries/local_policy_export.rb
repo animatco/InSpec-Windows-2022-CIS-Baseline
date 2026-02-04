@@ -102,30 +102,84 @@ class SeceditPolicy
     out
   end
 
-  #
-  # Registry fallback: System Access
-  #
-  def registry_system_access
-    keys = %w[
-      PasswordHistorySize
-      MaximumPasswordAge
-      MinimumPasswordAge
-      MinimumPasswordLength
-      PasswordComplexity
-      LockoutBadCount
-      ResetLockoutCount
-      LockoutDuration
-      AllowAdministratorLockout
-      ClearTextPassword
-    ]
 
-    keys.each_with_object({}) do |k, h|
-      h[k] = registry_read(
-        'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa',
-        k
-      )
+#
+# Fallback: System Access (Password + Lockout Policy)
+#
+# Primary source is secedit export. If secedit export fails (common when WinRM
+# is not elevated), we fall back to parsing `net accounts` for the password
+# and lockout policy items that command exposes. Remaining items are best-effort
+# via registry where applicable.
+#
+def registry_system_access
+  sys = net_accounts_system_access
+
+  # Best-effort: these exist as LSA values on many builds (but not guaranteed)
+  lsa = %w[
+    PasswordComplexity
+    AllowAdministratorLockout
+    ClearTextPassword
+  ].each_with_object({}) do |k, h|
+    h[k] = registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', k)
+  end
+
+  # Merge, preferring net accounts where present
+  sys.merge(lsa) { |_k, a, b| a.nil? ? b : a }
+end
+
+#
+# Parse `net accounts` output for password/lockout policy
+#
+def net_accounts_system_access
+  out = {}
+
+  cmd = @inspec.command('cmd.exe /c net accounts')
+  return out unless cmd && cmd.exit_status == 0
+
+  cmd.stdout.to_s.each_line do |line|
+    line = line.strip
+    next if line.empty?
+
+    # Examples (localized output may differ; this targets en-US)
+    # Length of password history maintained: 24
+    # Maximum password age (days): 42
+    # Minimum password age (days): 1
+    # Minimum password length: 14
+    # Lockout threshold: 5
+    # Lockout duration (minutes): 15
+    # Lockout observation window (minutes): 15
+    if line =~ /^Length of password history maintained:\s+(\d+)$/i
+      out['PasswordHistorySize'] = Regexp.last_match(1)
+    elsif line =~ /^Maximum password age\s*\(days\):\s+(.+)$/i
+      out['MaximumPasswordAge'] = normalize_net_accounts_age(Regexp.last_match(1))
+    elsif line =~ /^Minimum password age\s*\(days\):\s+(.+)$/i
+      out['MinimumPasswordAge'] = normalize_net_accounts_age(Regexp.last_match(1))
+    elsif line =~ /^Minimum password length:\s+(\d+)$/i
+      out['MinimumPasswordLength'] = Regexp.last_match(1)
+    elsif line =~ /^Lockout threshold:\s+(.+)$/i
+      out['LockoutBadCount'] = normalize_net_accounts_number(Regexp.last_match(1))
+    elsif line =~ /^Lockout duration\s*\(minutes\):\s+(.+)$/i
+      out['LockoutDuration'] = normalize_net_accounts_number(Regexp.last_match(1))
+    elsif line =~ /^Lockout observation window\s*\(minutes\):\s+(.+)$/i
+      out['ResetLockoutCount'] = normalize_net_accounts_number(Regexp.last_match(1))
     end
   end
+
+  out
+end
+
+def normalize_net_accounts_age(s)
+  s = s.to_s.strip
+  return '0' if s =~ /^never$/i
+  normalize_net_accounts_number(s)
+end
+
+def normalize_net_accounts_number(s)
+  s = s.to_s.strip
+  return '0' if s =~ /^never$/i
+  m = s.match(/(-?\d+)/)
+  m ? m[1] : nil
+end
 
   #
   # Registry fallback: Security Options
@@ -207,36 +261,38 @@ class LocalSecurityPolicy < Inspec.resource(1)
   end
 
   # Dynamic method_missing for other keys
-  def method_missing(name, *args)
-    key   = name.to_s
-    value = lookup_key(key)
-    return to_typed(value) unless value.nil?
-    super
-  end
+def method_missing(name, *args)
+  key = name.to_s
+  present, value = lookup_key_present(key)
+  return to_typed(value) if present
+  super
+end
 
-  def respond_to_missing?(name, include_private = false)
-    !lookup_key(name.to_s).nil? || super
-  end
+def respond_to_missing?(name, include_private = false)
+  present, _value = lookup_key_present(name.to_s)
+  present || super
+end
 
-  def [](key)
-    to_typed(lookup_key(key.to_s))
-  end
+def [](key)
+  _present, value = lookup_key_present(key.to_s)
+  to_typed(value)
+end
 
   private
 
   #
   # Dynamic section scanning
   #
-  def lookup_key(key)
-    return nil unless @policy.is_a?(Hash)
+def lookup_key_present(key)
+  return [false, nil] unless @policy.is_a?(Hash)
 
-    @policy.each_value do |section|
-      next unless section.is_a?(Hash)
-      return section[key] if section.key?(key)
-    end
-
-    nil
+  @policy.each_value do |section|
+    next unless section.is_a?(Hash)
+    return [true, section[key]] if section.key?(key)
   end
+
+  [false, nil]
+end
 
   def to_typed(v)
     return nil if v.nil?
