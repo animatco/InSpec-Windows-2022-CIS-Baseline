@@ -10,9 +10,7 @@ class AuditPolicy < Inspec.resource(1)
     @cache = nil
   end
 
-  #
   # Get audit policy settings for a specific category
-  #
   def category(category_name)
     return nil if category_name.nil?
 
@@ -22,9 +20,7 @@ class AuditPolicy < Inspec.resource(1)
     policies[category_name.to_s]
   end
 
-  #
   # Get all audit policies
-  #
   def policies
     parse_audit_policy
   end
@@ -35,46 +31,63 @@ class AuditPolicy < Inspec.resource(1)
 
   private
 
-  #
+  # Turn an "Inclusion Setting" string into an array of flags
+  # Examples:
+  #   "Success and Failure" -> ["Success", "Failure"]
+  #   "Success"             -> ["Success"]
+  #   "Failure"             -> ["Failure"]
+  #   "No Auditing"         -> []
+  #   nil / ""              -> []
+  def normalize_inclusion_setting(setting)
+    s = setting.to_s.strip
+    return [] if s.empty?
+    s_down = s.downcase
+
+    return [] if s_down == 'no auditing'
+    return ['Success', 'Failure'] if s_down == 'success and failure'
+    return ['Success'] if s_down == 'success'
+    return ['Failure'] if s_down == 'failure'
+
+    # Fallback: keep raw string for troubleshooting / unexpected values
+    [s]
+  end
+
   # Parse auditpol output and return hash of categories and their settings
-  #
+  # Each value is an Array of flags, or ["Mixed"] if subcategories differ.
   def parse_audit_policy
     return @cache if @cache
 
     @cache = {}
 
-    # Use auditpol to get audit policy settings in CSV format
-    ps = 'auditpol /get /category:* /r'
-    cmd = inspec.command(ps)
-
+    # Use auditpol to get audit policy settings in "report" (CSV-like) format
+    cmd = inspec.command('auditpol /get /category:* /r')
     return @cache unless cmd.exit_status == 0
 
     output = cmd.stdout.to_s
     return @cache if output.empty?
 
-    # Parse CSV output line by line
     lines = output.split("\n").reject(&:empty?)
 
-    # Skip header line if present
+    # Skip header line if present (contains "Category,Subcategory,Inclusion Setting" etc.)
     lines.shift if lines.first&.include?('Category')
 
     lines.each do |line|
-      parts = line.split(',').map { |p| p.to_s.strip.gsub('"', '') }
+      parts = line.split(',').map { |p| p.to_s.strip.delete('"') }
       next unless parts.length >= 3
 
-      category = parts[0]
+      category          = parts[0]
       inclusion_setting = parts[2]
-
       next if category.empty? || inclusion_setting.empty?
 
-      # Aggregate settings per category (all subcategories must match for category to be set)
+      normalized_flags = normalize_inclusion_setting(inclusion_setting)
+
+      # Aggregate settings per category; if any subcategory differs, mark as Mixed
       if @cache[category].nil?
-        @cache[category] = inclusion_setting
+        @cache[category] = normalized_flags
       else
-        # If any subcategory differs, mark as mixed
-        existing = @cache[category].to_s
-        unless existing == inclusion_setting
-          @cache[category] = "Mixed" unless existing.include?("Mixed")
+        existing = @cache[category]
+        unless existing == normalized_flags
+          @cache[category] = ['Mixed'] unless existing.include?('Mixed')
         end
       end
     end

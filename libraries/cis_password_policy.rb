@@ -5,37 +5,37 @@
 # Section 01 — Account Policies
 ###############################################
 
-# Updated CisPasswordPolicy library with stronger nil/zero handling
+# Updated CisPasswordPolicy library for LOCAL POLICY:
+# - secedit/net accounts already use DAYS for age and MINUTES for lockout.
+# - Do NOT divide by SECONDS_PER_DAY or SECONDS_PER_MINUTE here.
 
 module CisPasswordPolicy
-  SECONDS_PER_DAY    = 86_400
-  SECONDS_PER_MINUTE = 60
-
   # ---- Numeric converters -----------------------------------------------------
 
   # Returns Integer days or nil if value is nil.
-  # 0 days is a valid value here, so do not special-case it.
+  # secedit: MaximumPasswordAge, MinimumPasswordAge are in DAYS.
   def self.max_age_days(value)
     return nil if value.nil?
-    value.to_i / SECONDS_PER_DAY
+    value.to_i        # e.g. "90" -> 90 days
   end
 
   # Returns Integer days or nil if value is nil.
   def self.min_age_days(value)
     return nil if value.nil?
-    value.to_i / SECONDS_PER_DAY
+    value.to_i        # e.g. "0" -> 0 days
   end
 
   # Returns Integer minutes or nil if value is nil.
+  # secedit/net accounts: LockoutDuration, ResetLockoutCount are in MINUTES.
   def self.lockout_minutes(value)
     return nil if value.nil?
-    value.to_i / SECONDS_PER_MINUTE
+    value.to_i        # e.g. "30" -> 30 minutes
   end
 
   # Returns Integer minutes or nil if value is nil.
   def self.reset_lockout_minutes(value)
     return nil if value.nil?
-    value.to_i / SECONDS_PER_MINUTE
+    value.to_i        # e.g. "30" -> 30 minutes
   end
 
   # Returns Integer threshold or nil if value is nil.
@@ -49,20 +49,20 @@ module CisPasswordPolicy
   # Returns true/false, or nil if policy not present.
   def self.complexity_enabled?(value)
     return nil if value.nil?
-    value.to_i == 1
+    value.to_i == 1   # 1 = Enabled
   end
 
   # Returns true when reversible encryption is disabled, false when enabled,
   # or nil if policy not present.
   def self.reversible_encryption_disabled?(value)
     return nil if value.nil?
-    value.to_i == 0
+    value.to_i == 0   # 0 = Disabled
   end
 
   # Returns true/false, or nil if policy not present.
   def self.admin_lockout_enabled?(value)
     return nil if value.nil?
-    value.to_i == 1
+    value.to_i == 1   # 1 = Enabled
   end
 
   # ---- Presence / configuration helpers --------------------------------------
@@ -72,7 +72,8 @@ module CisPasswordPolicy
     !value.nil? && !(value.respond_to?(:empty?) && value.empty?)
   end
 
-  # For controls where 0 means "not configured" or "unlimited" (e.g., CIS wants > 0).
+  # For controls where 0 means "not configured" or "unlimited"
+  # (e.g., CIS wants > 0).
   def self.configured_nonzero?(value)
     return false if value.nil?
     value.to_i != 0

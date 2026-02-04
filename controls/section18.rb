@@ -415,13 +415,22 @@ end
 control 'cis-18.6.7.1' do
   impact 1.0
   title "Ensure 'Audit client does not support encryption' is set to Enabled"
-  desc  'CIS Microsoft Windows Server 2022 v1.0.0 control 18.6.7.1.'
+  desc 'CIS Microsoft Windows Server 2022 v1.0.0 control 18.6.7.1.'
+
   only_if('Level 1 controls enabled') { input('run_level_1') }
   only_if('Applicable to Member Server or Domain Controller') do
     %w[domain_controller member_server].include?(input('server_role').to_s.strip.downcase)
   end
+
   tag cis_id: '18.6.7.1'
-  describe registry_key('HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\LanmanServer') do
+
+  reg = registry_key('HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows\\LanmanServer')
+
+  only_if('AuditClientDoesNotSupportEncryption value exists') do
+    reg.has_property?('AuditClientDoesNotSupportEncryption')
+  end
+
+  describe reg do
     its('AuditClientDoesNotSupportEncryption') { should cmp 1 }
   end
 end

@@ -1,11 +1,11 @@
 ﻿# frozen_string_literal: true
 
 class SeceditPolicy
-  EXPORT_CFG = 'C:\\Windows\\Temp\\inspec-secpol.cfg'.freeze
+  EXPORT_CFG = 'C:\Windows\Temp\inspec-secpol.cfg'.freeze
 
   def initialize(inspec)
     @inspec = inspec
-    @cache = nil
+    @cache  = nil
   end
 
   def export_and_parse
@@ -16,16 +16,16 @@ class SeceditPolicy
 
     if export_successful?
       @cache = parse_ini(read_export_file)
-      # Merge net accounts + LSA to ensure all Section 1 values exist
-      merge_fallback_sources
+      merge_fallback_sources              # System Access: net accounts + LSA + secedit safety net
+      merge_security_options_from_registry # NEW: always overlay Security Options from registry
       return @cache
     end
 
-    # Pure registry fallback
+    # Pure registry/net accounts fallback
     @cache = {
-      'System Access' => registry_system_access,
+      'System Access'    => registry_system_access,
       'Privilege Rights' => {},
-      'Security Options' => registry_security_options
+      'Security Options' => registry_security_options,
     }
     @cache
   end
@@ -41,7 +41,8 @@ class SeceditPolicy
   end
 
   def export_successful?
-    @inspec.file(EXPORT_CFG).exist? && @inspec.file(EXPORT_CFG).size > 0
+    f = @inspec.file(EXPORT_CFG)
+    f.exist? && f.size > 0
   end
 
   def read_export_file
@@ -49,14 +50,14 @@ class SeceditPolicy
   end
 
   def parse_ini(text)
-    out = Hash.new { |h, k| h[k] = {} }
+    out     = Hash.new { |h, k| h[k] = {} }
     current = nil
 
+    text = text.dup
     text.encode!('UTF-8', invalid: :replace, undef: :replace, replace: '')
 
     text.each_line do |line|
-      line.chomp!
-      line.strip!
+      line = line.chomp.strip
       next if line.empty? || line.start_with?(';')
 
       if line.start_with?('[') && line.end_with?(']')
@@ -76,23 +77,55 @@ class SeceditPolicy
     out
   end
 
-  # Merge net accounts + LSA registry values into parsed secedit
+  # One-off helper to read a single System Access key from secedit,
+  # even when the main export branch is not used.
+  def secedit_system_access_value(key)
+    run_secedit_export
+    return nil unless export_successful?
+
+    text = read_export_file
+    line = text.each_line.find { |l| l.strip.start_with?("#{key} =") }
+    return nil unless line
+
+    raw = line.split('=', 2)[1].to_s.strip
+    raw.empty? ? nil : raw
+  end
+
+  # Merge net accounts + LSA registry into parsed secedit (when export works)
   def merge_fallback_sources
     return unless @cache['System Access'].is_a?(Hash)
 
-    # Get net accounts values
+    # net accounts: history / age / lockout
     net = net_accounts_system_access
     net.each { |k, v| @cache['System Access'][k] ||= v }
 
-    # Get LSA registry values (overrides only if missing)
-    lsa = %w[PasswordComplexity ClearTextPassword AllowAdministratorLockout].each_with_object({}) do |k, h|
-      h[k] = registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', k)
+    # LSA registry for the three account-policy booleans
+    lsa = %w[PasswordComplexity ClearTextPassword AllowAdministratorLockout]
+          .each_with_object({}) do |k, h|
+      h[k] = registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', k)
     end
+
     lsa.each { |k, v| @cache['System Access'][k] ||= v if v }
+  end
+
+  # NEW: Always ensure we have a 'Security Options' section populated from registry,
+  # even when secedit export succeeds.
+  def merge_security_options_from_registry
+    return unless @cache.is_a?(Hash)
+
+    @cache['Security Options'] ||= {}
+    reg_opts = registry_security_options
+    return unless reg_opts.is_a?(Hash)
+
+    reg_opts.each do |k, v|
+      next if v.nil?
+      @cache['Security Options'][k] ||= v
+    end
   end
 
   def net_accounts_system_access
     out = {}
+
     cmd = @inspec.command('cmd.exe /c net accounts')
     return out unless cmd && cmd.exit_status == 0
 
@@ -103,59 +136,81 @@ class SeceditPolicy
       if line =~ /^Length of password history maintained:\s+(\d+)$/i
         out['PasswordHistorySize'] = Regexp.last_match(1)
       elsif line =~ /^Maximum password age\s*\(days\):\s+(.+)$/i
-        out['MaximumPasswordAge'] = normalize_net_accounts_age(Regexp.last_match(1))
+        out['MaximumPasswordAge'] = normalize_number(Regexp.last_match(1))
       elsif line =~ /^Minimum password age\s*\(days\):\s+(.+)$/i
-        out['MinimumPasswordAge'] = normalize_net_accounts_age(Regexp.last_match(1))
+        out['MinimumPasswordAge'] = normalize_number(Regexp.last_match(1))
       elsif line =~ /^Minimum password length:\s+(\d+)$/i
         out['MinimumPasswordLength'] = Regexp.last_match(1)
       elsif line =~ /^Lockout threshold:\s+(.+)$/i
-        out['LockoutBadCount'] = normalize_net_accounts_number(Regexp.last_match(1))
+        out['LockoutBadCount'] = normalize_number(Regexp.last_match(1))
       elsif line =~ /^Lockout duration\s*\(minutes\):\s+(.+)$/i
-        out['LockoutDuration'] = normalize_net_accounts_number(Regexp.last_match(1))
+        out['LockoutDuration'] = normalize_number(Regexp.last_match(1))
       elsif line =~ /^Lockout observation window\s*\(minutes\):\s+(.+)$/i
-        out['ResetLockoutCount'] = normalize_net_accounts_number(Regexp.last_match(1))
+        out['ResetLockoutCount'] = normalize_number(Regexp.last_match(1))
       end
     end
 
     out
   end
 
-  def normalize_net_accounts_age(s)
+  def normalize_number(s)
     s = s.to_s.strip
     return '0' if s =~ /^never$/i
-    normalize_net_accounts_number(s)
-  end
 
-  def normalize_net_accounts_number(s)
-    s = s.to_s.strip
-    return '0' if s =~ /^never$/i
     m = s.match(/(-?\d+)/)
     m ? m[1] : nil
   end
 
   def registry_system_access
     sys = net_accounts_system_access
-    lsa = %w[PasswordComplexity AllowAdministratorLockout ClearTextPassword].each_with_object({}) do |k, h|
-      h[k] = registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', k)
+
+    lsa = %w[PasswordComplexity AllowAdministratorLockout ClearTextPassword]
+          .each_with_object({}) do |k, h|
+      h[k] = registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', k)
     end
-    sys.merge(lsa) { |_k, a, b| a.nil? ? b : a }
+
+    merged = sys.merge(lsa) { |_k, a, b| a.nil? ? b : a }
+
+    # Final safety net: if complexity/clear-text/admin-lockout still nil,
+    # pull them directly from secedit.
+    %w[PasswordComplexity ClearTextPassword AllowAdministratorLockout].each do |k|
+      if merged[k].nil?
+        val = secedit_system_access_value(k)
+        merged[k] = val unless val.nil?
+      end
+    end
+
+    merged
   end
 
   def registry_security_options
     {
-      'EnableAdminAccount' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', 'EnableAdminAccount'),
-      'EnableGuestAccount' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', 'EnableGuestAccount'),
-      'LimitBlankPasswordUse' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse'),
-      'SCENoApplyLegacyAuditPolicy' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', 'SCENoApplyLegacyAuditPolicy'),
-      'AddPrinterDrivers' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Print\\Providers\\LanMan Print Services\\Servers', 'AddPrinterDrivers'),
-      'RequireSignOrSeal' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters', 'RequireSignOrSeal'),
-      'SealSecureChannel' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters', 'SealSecureChannel'),
-      'SignSecureChannel' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters', 'SignSecureChannel'),
-      'RequireStrongKey' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters', 'RequireStrongKey'),
-      'DisableCAD' => registry_read('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', 'DisableCAD'),
-      'InactivityTimeoutSecs' => registry_read('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', 'InactivityTimeoutSecs'),
-      'RequireSecuritySignature' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters', 'RequireSecuritySignature'),
-      'EnableSecuritySignature' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters', 'EnableSecuritySignature')
+      'EnableAdminAccount' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', 'EnableAdminAccount'),
+      'EnableGuestAccount' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', 'EnableGuestAccount'),
+      'LimitBlankPasswordUse' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', 'LimitBlankPasswordUse'),
+      'SCENoApplyLegacyAuditPolicy' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Lsa', 'SCENoApplyLegacyAuditPolicy'),
+      'AddPrinterDrivers' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Control\Print\Providers\LanMan Print Services\Servers', 'AddPrinterDrivers'),
+      'RequireSignOrSeal' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters', 'RequireSignOrSeal'),
+      'SealSecureChannel' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters', 'SealSecureChannel'),
+      'SignSecureChannel' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters', 'SignSecureChannel'),
+      'RequireStrongKey' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters', 'RequireStrongKey'),
+      'DisableCAD' =>
+        registry_read('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', 'DisableCAD'),
+      'InactivityTimeoutSecs' =>
+        registry_read('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', 'InactivityTimeoutSecs'),
+      'RequireSecuritySignature' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters', 'RequireSecuritySignature'),
+      'EnableSecuritySignature' =>
+        registry_read('HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters', 'EnableSecuritySignature'),
     }
   end
 
@@ -174,8 +229,7 @@ class SeceditPolicy
     return nil if raw.empty?
 
     if raw.include?(',')
-      parts = raw.split(',')
-      raw = parts[-1].strip
+      raw = raw.split(',')[-1].strip
     end
 
     raw.match?(/^[-]?\d+$/) ? raw.to_i : raw
@@ -184,7 +238,7 @@ end
 
 class LocalSecurityPolicy < Inspec.resource(1)
   name 'local_security_policy'
-  desc 'Reads Local Security Policy values via secedit export or registry fallback.'
+  desc 'Reads Local Security Policy values via secedit export or registry/net accounts fallback.'
   supports platform: 'windows'
 
   def initialize
@@ -196,6 +250,7 @@ class LocalSecurityPolicy < Inspec.resource(1)
     key = name.to_s
     present, value = lookup_key_present(key)
     return to_typed(value) if present
+
     super
   end
 
@@ -213,15 +268,18 @@ class LocalSecurityPolicy < Inspec.resource(1)
 
   def lookup_key_present(key)
     return [false, nil] unless @policy.is_a?(Hash)
+
     @policy.each_value do |section|
       next unless section.is_a?(Hash)
       return [true, section[key]] if section.key?(key)
     end
+
     [false, nil]
   end
 
   def to_typed(v)
     return nil if v.nil?
+
     s = v.to_s.strip
     s.match?(/^[-]?\d+$/) ? s.to_i : s
   end

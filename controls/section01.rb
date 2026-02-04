@@ -95,7 +95,6 @@ control 'cis-1.1.4' do
 end
 
 # 1.1.5 Password complexity
-
 control 'cis-1.1.5' do
   impact 1.0
   title 'Ensure Password must meet complexity requirements is set to Enabled.'
@@ -108,13 +107,26 @@ control 'cis-1.1.5' do
 
   tag cis_id: '1.1.5'
 
+  # Read PasswordComplexity directly from secedit [System Access]
+  raw_complexity = powershell(<<~POWERSHELL).stdout.to_s.strip
+    $cfg = 'C:\\Windows\\Temp\\cis-secpol-1-1-5.cfg'
+    secedit /export /cfg $cfg /areas SECURITYPOLICY /quiet | Out-Null
+    if (Test-Path $cfg) {
+      $line = Get-Content $cfg | Where-Object { $_ -match '^\\s*PasswordComplexity\\s*=' } | Select-Object -First 1
+      if ($line) {
+        ($line -split '=', 2)[1].Trim()
+      }
+    }
+  POWERSHELL
+
   describe 'Password complexity enabled' do
-    subject { CisPasswordPolicy.complexity_enabled?(local_security_policy.PasswordComplexity) }
+    subject { CisPasswordPolicy.complexity_enabled?(raw_complexity) }
 
     it { should_not be_nil }
     it { should cmp true }
   end
 end
+
 
 # 1.1.6 Relax minimum password length limits
 
@@ -136,7 +148,6 @@ control 'cis-1.1.6' do
 end
 
 # 1.1.7 Reversible encryption
-
 control 'cis-1.1.7' do
   impact 1.0
   title 'Ensure Store passwords using reversible encryption is set to Disabled'
@@ -149,8 +160,20 @@ control 'cis-1.1.7' do
 
   tag cis_id: '1.1.7'
 
+  # Read ClearTextPassword directly from secedit [System Access]
+  raw_cleartext = powershell(<<~POWERSHELL).stdout.to_s.strip
+    $cfg = 'C:\\Windows\\Temp\\cis-secpol-1-1-7.cfg'
+    secedit /export /cfg $cfg /areas SECURITYPOLICY /quiet | Out-Null
+    if (Test-Path $cfg) {
+      $line = Get-Content $cfg | Where-Object { $_ -match '^\\s*ClearTextPassword\\s*=' } | Select-Object -First 1
+      if ($line) {
+        ($line -split '=', 2)[1].Trim()
+      }
+    }
+  POWERSHELL
+
   describe 'Reversible encryption disabled' do
-    subject { CisPasswordPolicy.reversible_encryption_disabled?(local_security_policy.ClearTextPassword) }
+    subject { CisPasswordPolicy.reversible_encryption_disabled?(raw_cleartext) }
 
     it { should_not be_nil }
     it { should cmp true }
@@ -203,7 +226,6 @@ control 'cis-1.2.2' do
 end
 
 # 1.2.3 Allow Administrator account lockout
-
 control 'cis-1.2.3' do
   impact 1.0
   title 'Ensure Allow Administrator account lockout is set to Enabled'
@@ -216,8 +238,20 @@ control 'cis-1.2.3' do
 
   tag cis_id: '1.2.3'
 
+  # Read AllowAdministratorLockout directly from secedit [System Access]
+  raw_admin_lockout = powershell(<<~POWERSHELL).stdout.to_s.strip
+    $cfg = 'C:\\Windows\\Temp\\cis-secpol-1-2-3.cfg'
+    secedit /export /cfg $cfg /areas SECURITYPOLICY /quiet | Out-Null
+    if (Test-Path $cfg) {
+      $line = Get-Content $cfg | Where-Object { $_ -match '^\\s*AllowAdministratorLockout\\s*=' } | Select-Object -First 1
+      if ($line) {
+        ($line -split '=', 2)[1].Trim()
+      }
+    }
+  POWERSHELL
+
   describe 'Administrator lockout enabled' do
-    subject { CisPasswordPolicy.admin_lockout_enabled?(local_security_policy.AllowAdministratorLockout) }
+    subject { CisPasswordPolicy.admin_lockout_enabled?(raw_admin_lockout) }
 
     it { should_not be_nil }
     it { should cmp true }
