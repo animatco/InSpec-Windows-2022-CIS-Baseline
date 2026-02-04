@@ -6,6 +6,7 @@
 # - Windows Server 2012R2 → 2025 compatible
 # - WinRM-safe (no profile temp dirs)
 # - FIXED: Robust INI parsing with section/key stripping + LSA overrides
+# - Local Security Policy export parser - DEBUG VERSION
 
 class SeceditPolicy
   EXPORT_CFG = 'C:\\Windows\\Temp\\inspec-secpol.cfg'.freeze
@@ -15,7 +16,6 @@ class SeceditPolicy
     @cache = nil
   end
 
-  # Main entry point
   def export_and_parse
     return @cache if @cache
 
@@ -24,17 +24,62 @@ class SeceditPolicy
 
     if export_successful?
       @cache = parse_ini(read_export_file)
+      
+      # DEBUG: Show what was actually parsed
+      @inspec.command("echo 'DEBUG: Cache keys: #{@cache.keys.inspect}'")
+      if @cache['System Access']
+        @inspec.command("echo 'DEBUG System Access keys: #{@cache['System Access'].keys.inspect}'")
+        @inspec.command("echo 'DEBUG PasswordComplexity: #{@cache['System Access']['PasswordComplexity'].inspect}'")
+        @inspec.command("echo 'DEBUG ClearTextPassword: #{@cache['System Access']['ClearTextPassword'].inspect}'")
+        @inspec.command("echo 'DEBUG AllowAdministratorLockout: #{@cache['System Access']['AllowAdministratorLockout'].inspect}'")
+      end
+      
       return @cache
     end
 
-    # Registry fallback (System Access + Security Options)
-    @cache = {
+    # Registry fallback
+    @cache = build_registry_fallback
+    @inspec.command("echo 'DEBUG: Using REGISTRY FALLBACK'")
+    @cache
+  end
+
+  private
+
+  def build_registry_fallback
+    {
       'System Access' => registry_system_access,
-      'Privilege Rights' => {}, # cannot be reliably reconstructed from registry
+      'Privilege Rights' => {},
       'Security Options' => registry_security_options
     }
+  end
 
-    @cache
+  # FIXED parse_ini with aggressive stripping
+  def parse_ini(text)
+    out = Hash.new { |h, k| h[k] = {} }
+    current = nil
+
+    text.encode!('UTF-8', invalid: :replace, undef: :replace, replace: '')
+
+    text.each_line do |line|
+      line.chomp!  # Remove line endings first
+      line.strip!
+      next if line.empty? || line.start_with?(';')
+
+      if line.start_with?('[') && line.end_with?(']')
+        current = line[1..-2].strip
+        next
+      end
+
+      next unless current
+
+      if (idx = line.index('='))
+        key = line[0...idx].strip
+        val = line[(idx + 1)..-1].strip
+        out[current][key] = val
+      end
+    end
+
+    out
   end
 
   private
