@@ -184,7 +184,7 @@ control 'cis-2.3.2.2' do
   tag cis_id: '2.3.2.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('CrashOnAuditFail') should cmp 0
+    its('CrashOnAuditFail') { should cmp 0 }
   end
 end
 
@@ -200,7 +200,7 @@ control 'cis-2.3.5.1' do
   tag cis_id: '2.3.5.1'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('SubmitControl') should cmp 0
+    its('SubmitControl') { should cmp 0 }
   end
 end
 
@@ -216,7 +216,7 @@ control 'cis-2.3.5.2' do
   tag cis_id: '2.3.5.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('VulnerableChannelAllowList') should cmp 0
+    its('VulnerableChannelAllowList') { should cmp 0 }
   end
 end
 
@@ -232,7 +232,7 @@ control 'cis-2.3.5.3' do
   tag cis_id: '2.3.5.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters') do
-    its('LdapEnforceChannelBinding') should cmp 2
+    its('LdapEnforceChannelBinding') { should cmp 2 }
   end
 end
 
@@ -248,7 +248,7 @@ control 'cis-2.3.5.4' do
   tag cis_id: '2.3.5.4'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters') do
-    its('LDAPServerIntegrity') should cmp 2
+    its('LDAPServerIntegrity') { should cmp 2 }
   end
 end
 
@@ -264,7 +264,7 @@ control 'cis-2.3.5.5' do
   tag cis_id: '2.3.5.5'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('RefusePasswordChange') should cmp 0
+    its('RefusePasswordChange') { should cmp 0 }
   end
 end
 
@@ -280,7 +280,7 @@ control 'cis-2.3.6.2' do
   tag cis_id: '2.3.6.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('SealSecureChannel') should cmp 1
+    its('SealSecureChannel') { should cmp 1 }
   end
 end
 
@@ -296,7 +296,7 @@ control 'cis-2.3.6.3' do
   tag cis_id: '2.3.6.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('SignSecureChannel') should cmp 1
+    its('SignSecureChannel') { should cmp 1 }
   end
 end
 
@@ -312,7 +312,7 @@ control 'cis-2.3.6.4' do
   tag cis_id: '2.3.6.4'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('DisablePasswordChange') should cmp 0
+    its('DisablePasswordChange') { should cmp 0 }
   end
 end
 
@@ -328,7 +328,7 @@ control 'cis-2.3.6.5' do
   tag cis_id: '2.3.6.5'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('MaximumPasswordAge') should cmp 30
+    its('MaximumPasswordAge') { should cmp 30 }
   end
 end
 
@@ -344,7 +344,7 @@ control 'cis-2.3.6.6' do
   tag cis_id: '2.3.6.6'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('RequireStrongKey') should cmp 1
+    its('RequireStrongKey') { should cmp 1 }
   end
 end
 
@@ -360,7 +360,7 @@ control 'cis-2.3.7.5' do
   tag cis_id: '2.3.7.5'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('LegalNoticeCaption') should cmp 'DoD Notice and Consent Banner'
+    its('LegalNoticeCaption') { should cmp 'DoD Notice and Consent Banner' }
   end
 end
 
@@ -376,7 +376,7 @@ control 'cis-2.3.7.6' do
   tag cis_id: '2.3.7.6'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows Nt\\CurrentVersion\\Winlogon') do
-    its('CachedLogonsCount') should cmp 1
+    its('CachedLogonsCount') { should cmp 1 }
   end
 end
 
@@ -392,7 +392,7 @@ control 'cis-2.3.7.7' do
   tag cis_id: '2.3.7.7'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows Nt\\CurrentVersion\\Winlogon') do
-    its('PasswordExpiryWarning') should cmp 14
+    its('PasswordExpiryWarning') { should cmp 14 }
   end
 end
 
@@ -408,7 +408,7 @@ control 'cis-2.3.7.8' do
   tag cis_id: '2.3.7.8'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows Nt\\CurrentVersion\\Winlogon') do
-    its('ForceUnlockLogon') should cmp 1
+    its('ForceUnlockLogon') { should cmp 1 }
   end
 end
 
@@ -424,7 +424,7 @@ control 'cis-2.3.7.9' do
   tag cis_id: '2.3.7.9'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows Nt\\CurrentVersion\\Winlogon') do
-    its('ScRemoveOption') should cmp 1
+    its('ScRemoveOption') { should cmp 1 }
   end
 end
 
@@ -440,7 +440,7 @@ control 'cis-2.3.8.3' do
   tag cis_id: '2.3.8.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters') do
-    its('EnablePlainTextPassword') should cmp 0
+    its('EnablePlainTextPassword') { should cmp 0 }
   end
 end
 
@@ -456,7 +456,7 @@ control 'cis-2.3.9.3' do
   tag cis_id: '2.3.9.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Lanmanserver\\Parameters') do
-    its('EnableSecuritySignature') should cmp 1
+    its('EnableSecuritySignature') { should cmp 1 }
   end
 end
 
@@ -472,7 +472,7 @@ control 'cis-2.3.9.4' do
   tag cis_id: '2.3.9.4'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Lanmanserver\\Parameters') do
-    its('EnableForcedLogoff') should cmp 1
+    its('EnableForcedLogoff') { should cmp 1 }
   end
 end
 
@@ -488,7 +488,7 @@ control 'cis-2.3.9.5' do
   tag cis_id: '2.3.9.5'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanManServer\\Parameters') do
-    its('SMBServerNameHardeningLevel') should cmp 1
+    its('SMBServerNameHardeningLevel') { should cmp 1 }
   end
 end
 
@@ -520,7 +520,7 @@ control 'cis-2.3.10.2' do
   tag cis_id: '2.3.10.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('RestrictAnonymousSAM') should cmp 1
+    its('RestrictAnonymousSAM') { should cmp 1 }
   end
 end
 
@@ -536,7 +536,7 @@ control 'cis-2.3.10.3' do
   tag cis_id: '2.3.10.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('RestrictAnonymous') should cmp 1
+    its('RestrictAnonymous') { should cmp 1 }
   end
 end
 
@@ -552,7 +552,7 @@ control 'cis-2.3.10.4' do
   tag cis_id: '2.3.10.4'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('DisableDomainCreds') should cmp 1
+    its('DisableDomainCreds') { should cmp 1 }
   end
 end
 
@@ -568,7 +568,7 @@ control 'cis-2.3.10.5' do
   tag cis_id: '2.3.10.5'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('EveryoneIncludesAnonymous') should cmp 0
+    its('EveryoneIncludesAnonymous') { should cmp 0 }
   end
 end
 
@@ -584,7 +584,7 @@ control 'cis-2.3.10.6' do
   tag cis_id: '2.3.10.6'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanManServer\\Parameters') do
-    its('NullSessionPipes') should cmp ['LSARPC', 'NETLOGON', 'SAMR']
+    its('NullSessionPipes') { should cmp ['LSARPC', 'NETLOGON', 'SAMR'] }
   end
 end
 
@@ -600,7 +600,7 @@ control 'cis-2.3.10.7' do
   tag cis_id: '2.3.10.7'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanManServer\\Parameters') do
-    its('NullSessionPipes') should cmp ''
+    its('NullSessionPipes') { should cmp '' }
   end
 end
 
@@ -616,7 +616,7 @@ control 'cis-2.3.10.8' do
   tag cis_id: '2.3.10.8'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Securepipeservers\\Winreg\\AllowedExactpaths') do
-    its('Machine') should cmp ['SYSTEM\\CurrentControlSet\\Control\\ProductOptions', 'SYSTEM\\CurrentControlSet\\Control\\Server Applications', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion']
+    its('Machine') { should cmp ['SYSTEM\\CurrentControlSet\\Control\\ProductOptions', 'SYSTEM\\CurrentControlSet\\Control\\Server Applications', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'] }
   end
 end
 
@@ -632,7 +632,7 @@ control 'cis-2.3.10.9' do
   tag cis_id: '2.3.10.9'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Securepipeservers\\Winreg\\Allowedpaths') do
-    its('Machine') should cmp '{{ rule_2_3_10_9_remote_registry_paths }}'
+    its('Machine') { should cmp '{{ rule_2_3_10_9_remote_registry_paths }}' }
   end
 end
 
@@ -648,7 +648,7 @@ control 'cis-2.3.10.10' do
   tag cis_id: '2.3.10.10'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Lanmanserver\\Parameters') do
-    its('RestrictNullSessAccess') should cmp 1
+    its('RestrictNullSessAccess') { should cmp 1 }
   end
 end
 
@@ -664,7 +664,7 @@ control 'cis-2.3.10.11' do
   tag cis_id: '2.3.10.11'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('RestrictRemoteSAM') should cmp 'O:BAG:BAD:(A;;RC;;;BA)'
+    its('RestrictRemoteSAM') { should cmp 'O:BAG:BAD:(A;;RC;;;BA)' }
   end
 end
 
@@ -680,7 +680,7 @@ control 'cis-2.3.10.12' do
   tag cis_id: '2.3.10.12'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Lanmanserver\\Parameters') do
-    its('NullSessionShares') should cmp ''
+    its('NullSessionShares') { should cmp '' }
   end
 end
 
@@ -696,7 +696,7 @@ control 'cis-2.3.10.13' do
   tag cis_id: '2.3.10.13'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('ForceGuest') should cmp 0
+    its('ForceGuest') { should cmp 0 }
   end
 end
 
@@ -712,7 +712,7 @@ control 'cis-2.3.11.1' do
   tag cis_id: '2.3.11.1'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('UseMachineId') should cmp 1
+    its('UseMachineId') { should cmp 1 }
   end
 end
 
@@ -728,7 +728,7 @@ control 'cis-2.3.11.2' do
   tag cis_id: '2.3.11.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\Msv1_0') do
-    its('AllowNullSessionFallback') should cmp 0
+    its('AllowNullSessionFallback') { should cmp 0 }
   end
 end
 
@@ -744,7 +744,7 @@ control 'cis-2.3.11.3' do
   tag cis_id: '2.3.11.3'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\Pku2U') do
-    its('AllowOnlineID') should cmp 0
+    its('AllowOnlineID') { should cmp 0 }
   end
 end
 
@@ -760,10 +760,10 @@ control 'cis-2.3.11.4' do
   tag cis_id: '2.3.11.4'
 
   describe registry_key('HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Kerberos\\Parameters') do
-    its('SupportedEncryptionTypes') should cmp 2147483644
+    its('SupportedEncryptionTypes') { should cmp 2147483644 }
   end
   describe registry_key('HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Kerberos\\Parameters') do
-    its('SupportedEncryptionTypes') should cmp 2147483640
+    its('SupportedEncryptionTypes') { should cmp 2147483640 }
   end
 end
 
@@ -779,7 +779,7 @@ control 'cis-2.3.11.5' do
   tag cis_id: '2.3.11.5'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('NoLMHash') should cmp 1
+    its('NoLMHash') { should cmp 1 }
   end
 end
 
@@ -795,7 +795,7 @@ control 'cis-2.3.11.6' do
   tag cis_id: '2.3.11.6'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanManServer\\Parameters') do
-    its('EnableForcedLogOff') should cmp 1
+    its('EnableForcedLogOff') { should cmp 1 }
   end
 end
 
@@ -811,7 +811,7 @@ control 'cis-2.3.11.7' do
   tag cis_id: '2.3.11.7'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa') do
-    its('LMCompatibilityLevel') should cmp 5
+    its('LMCompatibilityLevel') { should cmp 5 }
   end
 end
 
@@ -827,7 +827,7 @@ control 'cis-2.3.11.8' do
   tag cis_id: '2.3.11.8'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Ldap') do
-    its('LDAPClientConfidentiality') should cmp 1
+    its('LDAPClientConfidentiality') { should cmp 1 }
   end
 end
 
@@ -843,7 +843,7 @@ control 'cis-2.3.11.9' do
   tag cis_id: '2.3.11.9'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Ldap') do
-    its('LDAPClientIntegrity') should cmp 1
+    its('LDAPClientIntegrity') { should cmp 1 }
   end
 end
 
@@ -859,7 +859,7 @@ control 'cis-2.3.11.10' do
   tag cis_id: '2.3.11.10'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\Msv1_0') do
-    its('NTLMMinClientSec') should cmp 537395200
+    its('NTLMMinClientSec') { should cmp 537395200 }
   end
 end
 
@@ -875,7 +875,7 @@ control 'cis-2.3.11.11' do
   tag cis_id: '2.3.11.11'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\Msv1_0') do
-    its('NTLMMinServerSec') should cmp 537395200
+    its('NTLMMinServerSec') { should cmp 537395200 }
   end
 end
 
@@ -891,7 +891,7 @@ control 'cis-2.3.11.12' do
   tag cis_id: '2.3.11.12'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\MSV1_0') do
-    its('AuditReceivingNTLMTraffic') should cmp 2
+    its('AuditReceivingNTLMTraffic') { should cmp 2 }
   end
 end
 
@@ -907,7 +907,7 @@ control 'cis-2.3.11.13' do
   tag cis_id: '2.3.11.13'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters') do
-    its('AuditNTLMInDomain') should cmp 7
+    its('AuditNTLMInDomain') { should cmp 7 }
   end
 end
 
@@ -923,7 +923,7 @@ control 'cis-2.3.11.14' do
   tag cis_id: '2.3.11.14'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\MSV1_0') do
-    its('RestrictSendingNTLMTraffic') should cmp 2
+    its('RestrictSendingNTLMTraffic') { should cmp 2 }
   end
 end
 
@@ -939,7 +939,7 @@ control 'cis-2.3.13.1' do
   tag cis_id: '2.3.13.1'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('ShutdownWithoutLogon') should cmp 0
+    its('ShutdownWithoutLogon') { should cmp 0 }
   end
 end
 
@@ -955,7 +955,7 @@ control 'cis-2.3.15.1' do
   tag cis_id: '2.3.15.1'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Kernel') do
-    its('ObCaseInsensitive') should cmp 1
+    its('ObCaseInsensitive') { should cmp 1 }
   end
 end
 
@@ -971,7 +971,7 @@ control 'cis-2.3.15.2' do
   tag cis_id: '2.3.15.2'
 
   describe registry_key('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager') do
-    its('ProtectionMode') should cmp 1
+    its('ProtectionMode') { should cmp 1 }
   end
 end
 
@@ -987,7 +987,7 @@ control 'cis-2.3.17.1' do
   tag cis_id: '2.3.17.1'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('FilterAdministratorToken') should cmp 1
+    its('FilterAdministratorToken') { should cmp 1 }
   end
 end
 
@@ -1003,7 +1003,7 @@ control 'cis-2.3.17.2' do
   tag cis_id: '2.3.17.2'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('ConsentPromptBehaviorAdmin') should cmp 2
+    its('ConsentPromptBehaviorAdmin') { should cmp 2 }
   end
 end
 
@@ -1019,7 +1019,7 @@ control 'cis-2.3.17.3' do
   tag cis_id: '2.3.17.3'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('ConsentPromptBehaviorUser') should cmp 0
+    its('ConsentPromptBehaviorUser') { should cmp 0 }
   end
 end
 
@@ -1035,7 +1035,7 @@ control 'cis-2.3.17.4' do
   tag cis_id: '2.3.17.4'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('EnableInstallerDetection') should cmp 1
+    its('EnableInstallerDetection') { should cmp 1 }
   end
 end
 
@@ -1051,7 +1051,7 @@ control 'cis-2.3.17.5' do
   tag cis_id: '2.3.17.5'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('EnableSecureUIAPaths') should cmp 1
+    its('EnableSecureUIAPaths') { should cmp 1 }
   end
 end
 
@@ -1067,7 +1067,7 @@ control 'cis-2.3.17.6' do
   tag cis_id: '2.3.17.6'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('EnableLUA') should cmp 1
+    its('EnableLUA') { should cmp 1 }
   end
 end
 
@@ -1083,7 +1083,7 @@ control 'cis-2.3.17.7' do
   tag cis_id: '2.3.17.7'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('PromptOnSecureDesktop') should cmp 1
+    its('PromptOnSecureDesktop') { should cmp 1 }
   end
 end
 
@@ -1099,6 +1099,6 @@ control 'cis-2.3.17.8' do
   tag cis_id: '2.3.17.8'
 
   describe registry_key('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System') do
-    its('EnableVirtualization') should cmp 1
+    its('EnableVirtualization') { should cmp 1 }
   end
 end
