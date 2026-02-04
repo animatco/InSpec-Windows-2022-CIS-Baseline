@@ -1,13 +1,5 @@
 ﻿# frozen_string_literal: true
 
-# Local Security Policy export parser
-# - Uses secedit for SECURITYPOLICY + USER_RIGHTS
-# - Falls back to registry for System Access + Security Options
-# - Windows Server 2012R2 → 2025 compatible
-# - WinRM-safe (no profile temp dirs)
-# - FIXED: Robust INI parsing with section/key stripping + LSA overrides
-# - Local Security Policy export parser - DEBUG VERSION
-
 class SeceditPolicy
   EXPORT_CFG = 'C:\\Windows\\Temp\\inspec-secpol.cfg'.freeze
 
@@ -24,36 +16,38 @@ class SeceditPolicy
 
     if export_successful?
       @cache = parse_ini(read_export_file)
-      
-      # DEBUG: Show what was actually parsed
-      @inspec.command("echo 'DEBUG: Cache keys: #{@cache.keys.inspect}'")
-      if @cache['System Access']
-        @inspec.command("echo 'DEBUG System Access keys: #{@cache['System Access'].keys.inspect}'")
-        @inspec.command("echo 'DEBUG PasswordComplexity: #{@cache['System Access']['PasswordComplexity'].inspect}'")
-        @inspec.command("echo 'DEBUG ClearTextPassword: #{@cache['System Access']['ClearTextPassword'].inspect}'")
-        @inspec.command("echo 'DEBUG AllowAdministratorLockout: #{@cache['System Access']['AllowAdministratorLockout'].inspect}'")
-      end
-      
+      # Merge net accounts + LSA to ensure all Section 1 values exist
+      merge_fallback_sources
       return @cache
     end
 
-    # Registry fallback
-    @cache = build_registry_fallback
-    @inspec.command("echo 'DEBUG: Using REGISTRY FALLBACK'")
+    # Pure registry fallback
+    @cache = {
+      'System Access' => registry_system_access,
+      'Privilege Rights' => {},
+      'Security Options' => registry_security_options
+    }
     @cache
   end
 
   private
 
-  def build_registry_fallback
-    {
-      'System Access' => registry_system_access,
-      'Privilege Rights' => {},
-      'Security Options' => registry_security_options
-    }
+  def cleanup_stale_export
+    @inspec.command(%(cmd.exe /c del /f /q "#{EXPORT_CFG}" 2>nul))
   end
 
-  # FIXED parse_ini with aggressive stripping
+  def run_secedit_export
+    @inspec.command(%(cmd.exe /c secedit /export /cfg "#{EXPORT_CFG}" /areas SECURITYPOLICY USER_RIGHTS /quiet))
+  end
+
+  def export_successful?
+    @inspec.file(EXPORT_CFG).exist? && @inspec.file(EXPORT_CFG).size > 0
+  end
+
+  def read_export_file
+    @inspec.file(EXPORT_CFG).content.to_s
+  end
+
   def parse_ini(text)
     out = Hash.new { |h, k| h[k] = {} }
     current = nil
@@ -61,7 +55,7 @@ class SeceditPolicy
     text.encode!('UTF-8', invalid: :replace, undef: :replace, replace: '')
 
     text.each_line do |line|
-      line.chomp!  # Remove line endings first
+      line.chomp!
       line.strip!
       next if line.empty? || line.start_with?(';')
 
@@ -82,78 +76,23 @@ class SeceditPolicy
     out
   end
 
-  private
+  # Merge net accounts + LSA registry values into parsed secedit
+  def merge_fallback_sources
+    return unless @cache['System Access'].is_a?(Hash)
 
-  # Remove stale export file
-  def cleanup_stale_export
-    @inspec.command(%(cmd.exe /c del /f /q "#{EXPORT_CFG}" 2>nul))
-  end
+    # Get net accounts values
+    net = net_accounts_system_access
+    net.each { |k, v| @cache['System Access'][k] ||= v }
 
-  # Execute secedit export
-  def run_secedit_export
-    @inspec.command(%(cmd.exe /c secedit /export /cfg "#{EXPORT_CFG}" /areas SECURITYPOLICY USER_RIGHTS /quiet))
-  end
-
-  # Check if export succeeded
-  def export_successful?
-    @inspec.file(EXPORT_CFG).exist? &&
-      @inspec.file(EXPORT_CFG).size > 0
-  end
-
-  # Read exported file content
-  def read_export_file
-    @inspec.file(EXPORT_CFG).content.to_s
-  end
-
-  # FIXED INI parser: strip sections AND values properly
-  def parse_ini(text)
-    out = Hash.new { |h, k| h[k] = {} }
-    current = nil
-
-    text.encode!('UTF-8', invalid: :replace, undef: :replace, replace: '')
-
-    text.each_line do |line|
-      line = line.strip
-      next if line.empty? || line.start_with?(';')
-
-      if line.start_with?('[') && line.end_with?(']')
-        current = line[1..-2].strip  # <-- FIXED: strip section names
-        next
-      end
-
-      next unless current
-
-      if (idx = line.index('='))
-        key = line[0...idx].strip
-        val = line[(idx + 1)..-1].strip  # <-- FIXED: use -1 then strip value
-        out[current][key] = val
-      end
-    end
-
-    out
-  end
-
-  # Fallback: System Access (Password + Lockout Policy)
-  def registry_system_access
-    sys = net_accounts_system_access
-
-    # Best-effort: these exist as LSA values on many builds (but not guaranteed)
-    lsa = %w[
-      PasswordComplexity
-      AllowAdministratorLockout
-      ClearTextPassword
-    ].each_with_object({}) do |k, h|
+    # Get LSA registry values (overrides only if missing)
+    lsa = %w[PasswordComplexity ClearTextPassword AllowAdministratorLockout].each_with_object({}) do |k, h|
       h[k] = registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', k)
     end
-
-    # Merge, preferring net accounts where present
-    sys.merge(lsa) { |_k, a, b| a.nil? ? b : a }
+    lsa.each { |k, v| @cache['System Access'][k] ||= v if v }
   end
 
-  # Parse `net accounts` output for password/lockout policy
   def net_accounts_system_access
     out = {}
-
     cmd = @inspec.command('cmd.exe /c net accounts')
     return out unless cmd && cmd.exit_status == 0
 
@@ -161,7 +100,6 @@ class SeceditPolicy
       line = line.strip
       next if line.empty?
 
-      # Examples (localized output may differ; this targets en-US)
       if line =~ /^Length of password history maintained:\s+(\d+)$/i
         out['PasswordHistorySize'] = Regexp.last_match(1)
       elsif line =~ /^Maximum password age\s*\(days\):\s+(.+)$/i
@@ -195,7 +133,14 @@ class SeceditPolicy
     m ? m[1] : nil
   end
 
-  # Registry fallback: Security Options
+  def registry_system_access
+    sys = net_accounts_system_access
+    lsa = %w[PasswordComplexity AllowAdministratorLockout ClearTextPassword].each_with_object({}) do |k, h|
+      h[k] = registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', k)
+    end
+    sys.merge(lsa) { |_k, a, b| a.nil? ? b : a }
+  end
+
   def registry_security_options
     {
       'EnableAdminAccount' => registry_read('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa', 'EnableAdminAccount'),
@@ -214,7 +159,6 @@ class SeceditPolicy
     }
   end
 
-  # Registry reader (typed)
   def registry_read(path, key)
     ps = <<~POWERSHELL
       $p = Get-ItemProperty -Path '#{path}' -ErrorAction SilentlyContinue
@@ -229,17 +173,15 @@ class SeceditPolicy
     raw = cmd.stdout.to_s.strip
     return nil if raw.empty?
 
-    # Handle registry values formatted as "type,value" (e.g., "4,1")
     if raw.include?(',')
       parts = raw.split(',')
-      raw = parts[-1].strip # Take the last part (the actual value)
+      raw = parts[-1].strip
     end
 
     raw.match?(/^[-]?\d+$/) ? raw.to_i : raw
   end
 end
 
-# Resource: local_security_policy
 class LocalSecurityPolicy < Inspec.resource(1)
   name 'local_security_policy'
   desc 'Reads Local Security Policy values via secedit export or registry fallback.'
@@ -250,24 +192,6 @@ class LocalSecurityPolicy < Inspec.resource(1)
     @policy = SeceditPolicy.new(inspec).export_and_parse || {}
   end
 
-  # Explicit accessors for commonly used settings
-  def EnableAdminAccount
-    to_typed(lookup_key('EnableAdminAccount'))
-  end
-
-  def EnableGuestAccount
-    to_typed(lookup_key('EnableGuestAccount'))
-  end
-
-  def LimitBlankPasswordUse
-    to_typed(lookup_key('LimitBlankPasswordUse'))
-  end
-
-  def EnableServerOperatorsScheduleTasks
-    to_typed(lookup_key('EnableServerOperatorsScheduleTasks'))
-  end
-
-  # Dynamic method_missing for other keys
   def method_missing(name, *args)
     key = name.to_s
     present, value = lookup_key_present(key)
@@ -287,15 +211,12 @@ class LocalSecurityPolicy < Inspec.resource(1)
 
   private
 
-  # Dynamic section scanning
   def lookup_key_present(key)
     return [false, nil] unless @policy.is_a?(Hash)
-
     @policy.each_value do |section|
       next unless section.is_a?(Hash)
       return [true, section[key]] if section.key?(key)
     end
-
     [false, nil]
   end
 
@@ -306,6 +227,5 @@ class LocalSecurityPolicy < Inspec.resource(1)
   end
 end
 
-# Ensure controls can always resolve constants, regardless of InSpec load context.
 Object.const_set(:SeceditPolicy, SeceditPolicy) unless Object.const_defined?(:SeceditPolicy)
 Object.const_set(:LocalSecurityPolicy, LocalSecurityPolicy) unless Object.const_defined?(:LocalSecurityPolicy)
